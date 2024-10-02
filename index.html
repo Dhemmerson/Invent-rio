@@ -145,8 +145,8 @@
                 const imagem = e.target.result; // Converte a imagem para Base64
                 const item = { numeroEtiqueta, mobiliario, local, cor, imagem, observacoes, dataInclusao };
                 addMobiliario(item);
-                saveMobiliario(item);
-                saveToGithub(item);  // Salvar no GitHub
+                saveMobiliario();  // Salvar localmente
+                saveToGithub();  // Salvar no GitHub
                 form.reset();
                 document.getElementById('corPicker').value = '#ffffff';
             };
@@ -192,6 +192,7 @@
         row.classList.add('editing');
 
         button.parentNode.parentNode.remove();
+        saveToGithub();  // Salvar alterações no GitHub após edição
     }
 
     function deleteItem(button) {
@@ -205,78 +206,139 @@
     }
 
     function searchMobiliario() {
-        const input = document.getElementById('search');
-        const filter = input.value.toLowerCase();
+        const input = document.getElementById('search').value.toLowerCase();
         const rows = mobiliarioTable.getElementsByTagName('tr');
 
         for (let i = 0; i < rows.length; i++) {
-            const cell = rows[i].getElementsByTagName('td')[2]; // Coluna 'Local'
-            if (cell) {
-                const txtValue = cell.textContent || cell.innerText;
-                rows[i].style.display = txtValue.toLowerCase().indexOf(filter) > -1 ? "" : "none";
+            const cells = rows[i].getElementsByTagName('td');
+            let found = false;
+
+            for (let j = 0; j < cells.length; j++) {
+                if (cells[j].innerText.toLowerCase().includes(input)) {
+                    found = true;
+                    break;
+                }
             }
+
+            rows[i].style.display = found ? '' : 'none';
         }
     }
 
-    function updateColorText() {
-        const corPicker = document.getElementById('corPicker');
-        const corInput = document.getElementById('cor');
-        corInput.value = corPicker.value;
-    }
+    function exportToExcel() {
+        let table = document.getElementById('mobiliarioTable');
+        let rows = table.querySelectorAll('tr');
+        let csv = [];
 
-    function updateColorPicker() {
-        const corInput = document.getElementById('cor');
-        const corPicker = document.getElementById('corPicker');
-        corPicker.value = corInput.value;
-    }
-
-    function saveToGithub(item) {
-        fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${fileName}`, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `token ${githubToken}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(item),
-        })
-        .then(response => {
-            if (response.ok) {
-                console.log('Dados salvos no GitHub com sucesso!');
-            } else {
-                console.error('Erro ao salvar no GitHub:', response.statusText);
+        for (let i = 0; i < rows.length; i++) {
+            let cols = rows[i].querySelectorAll('td, th');
+            let csvRow = [];
+            for (let j = 0; j < cols.length; j++) {
+                csvRow.push(cols[j].innerText);
             }
-        })
-        .catch(error => console.error('Erro na requisição:', error));
+            csv.push(csvRow.join(','));        
+        }
+
+        let csvString = csv.join('\n');
+        let blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        let url = URL.createObjectURL(blob);
+        let a = document.createElement('a');
+        a.href = url;
+        a.setAttribute('download', 'inventario.csv');
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    function saveMobiliario() {
+        const items = [];
+        const rows = mobiliarioTable.getElementsByTagName('tr');
+        for (let row of rows) {
+            const cells = row.getElementsByTagName('td');
+            const item = {
+                numeroEtiqueta: cells[0].innerText,
+                mobiliario: cells[1].innerText,
+                local: cells[2].innerText,
+                cor: cells[3].innerText,
+                imagem: cells[4].getElementsByTagName('img')[0].src,
+                observacoes: cells[5].innerText,
+                dataInclusao: cells[6].innerText,
+            };
+            items.push(item);
+        }
+        localStorage.setItem('mobiliario', JSON.stringify(items));
     }
 
     function loadMobiliario() {
-        fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${fileName}`)
-        .then(response => response.json())
-        .then(data => {
-            const base64Data = atob(data.content);
-            const jsonData = JSON.parse(base64Data);
-            jsonData.forEach(item => addMobiliario(item)); // Adiciona os itens à tabela
-        })
-        .catch(error => console.error('Erro ao carregar dados do GitHub:', error));
+        const items = JSON.parse(localStorage.getItem('mobiliario')) || [];
+        items.forEach(item => addMobiliario(item));
     }
 
-    function exportToExcel() {
-        let table = document.getElementById("mobiliarioTable");
-        let rows = Array.from(table.rows);
-        let csvContent = rows.map(row => Array.from(row.cells).map(cell => cell.innerText).join(",")).join("\n");
-        let blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        let url = URL.createObjectURL(blob);
-        let link = document.createElement("a");
-        link.setAttribute("href", url);
-        link.setAttribute("download", "mobiliario.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    function updateColorText() {
+        const colorInput = document.getElementById('corPicker');
+        document.getElementById('cor').value = colorInput.value;
     }
+
+    function updateColorPicker() {
+        const colorInput = document.getElementById('cor');
+        document.getElementById('corPicker').value = colorInput.value;
+    }
+
+    async function getFileSha() {
+        const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${fileName}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `token ${githubToken}`
+            }
+        });
+        if (response.ok) {
+            const data = await response.json();
+            return data.sha; // Retorna o SHA do arquivo
+        } else {
+            console.error('Erro ao buscar o SHA do arquivo:', response.statusText);
+            return null;
+        }
+    }
+
+    async function saveToGithub() {
+        const sha = await getFileSha();
+        const items = [];
+        const rows = mobiliarioTable.getElementsByTagName('tr');
+        for (let row of rows) {
+            const cells = row.getElementsByTagName('td');
+            const item = {
+                numeroEtiqueta: cells[0].innerText,
+                mobiliario: cells[1].innerText,
+                local: cells[2].innerText,
+                cor: cells[3].innerText,
+                imagem: cells[4].getElementsByTagName('img')[0].src,
+                observacoes: cells[5].innerText,
+                dataInclusao: cells[6].innerText,
+            };
+            items.push(item);
+        }
+
+        const body = JSON.stringify({ message: 'Atualizando o inventário', content: btoa(JSON.stringify(items)), sha });
+
+        const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${fileName}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `token ${githubToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: body
+        });
+
+        if (response.ok) {
+            console.log('Inventário salvo no GitHub com sucesso!');
+        } else {
+            console.error('Erro ao salvar no GitHub:', response.statusText);
+        }
+    }
+
 </script>
+
 </body>
 </html>
-
 
 
 
