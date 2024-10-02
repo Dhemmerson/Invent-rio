@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Inventário</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: url('sua-imagem-de-fundo.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        h1, h2 {
+            text-align: center;
+            color: #4a4a4a;
+            margin-bottom: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        input[type="text"], input[type="file"], input[type="color"], select {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #5c67f2;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #4a54d1;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        img {
+            max-width: 100px;
+        }
+        .editing {
+            background-color: #e0f7fa; /* Cor de fundo para indicar edição */
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Controle de Inventário</h1>
+
+    <h2>Inclusão de Mobiliário</h2>
+    <form id="inventarioForm">
+        <input type="text" id="numeroEtiqueta" placeholder="Número da Etiqueta" required>
+        <input type="text" id="mobiliario" placeholder="Mobiliário" required>
+        <select id="local" required>
+            <option value="">Selecione o Local</option>
+            <option value="Recepção">Recepção</option>
+            <option value="Sala Comercial">Sala Comercial</option>
+            <option value="Sala Financeiro">Sala Financeiro</option>
+            <option value="Sala SAC/Administrativo">Sala SAC/Administrativo</option>
+            <option value="Sala CEO">Sala CEO</option>
+            <option value="Sala de Descanso">Sala de Descanso</option>
+            <option value="Copa">Copa</option>
+        </select>
+        <label for="cor">Selecione a Cor:</label>
+        <input type="color" id="corPicker" onchange="updateColorText()" style="display: inline-block; width: auto;">
+        <input type="text" id="cor" placeholder="Nome da Cor" oninput="updateColorPicker()" required>
+        <input type="file" id="imagem" accept="image/*" required>
+        <input type="text" id="observacoes" placeholder="Observações">
+        <button type="submit">Adicionar Mobiliário</button>
+    </form>
+
+    <h2>Listagem de Mobiliário</h2>
+    <input type="text" id="search" placeholder="🔍 Buscar pelo Local" onkeyup="searchMobiliario()">
+    <table id="mobiliarioTable">
+        <thead>
+            <tr>
+                <th>Número da Etiqueta</th>
+                <th>Mobiliário</th>
+                <th>Local</th>
+                <th>Cor</th>
+                <th>Imagem</th>
+                <th>Observações</th>
+                <th>Data</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+    <button onclick="exportToExcel()">Exportar para Excel</button>
+    <button onclick="viewEditDeleteList()">Ver Itens Editados/Excluídos</button>
+</div>
+
+<div class="container" id="editDeleteListContainer" style="display: none;">
+    <h2>Itens Editados/Excluídos</h2>
+    <input type="password" id="listPassword" placeholder="Digite a senha para acessar" />
+    <button onclick="accessEditDeleteList()">Acessar Lista</button>
+    <div id="editDeleteList"></div>
+</div>
+
+<script>
+    const form = document.getElementById('inventarioForm');
+    const mobiliarioTable = document.getElementById('mobiliarioTable').getElementsByTagName('tbody')[0];
+    const editDeleteListContainer = document.getElementById('editDeleteListContainer');
+    const editDeleteList = document.getElementById('editDeleteList');
+
+    const senhaExclusao = 'senhaExcluir';
+    const senhaEdicao = 'senhaEditar';
+    const senhaLista = 'senhaLista';  // Senha para acessar a lista de itens editados/excluídos
+    const githubToken = 'SEU_TOKEN_DE_ACESSO_AQUI';  // Substitua pelo seu token de acesso pessoal
+    const repoOwner = 'SEU_USUÁRIO_AQUI';  // Substitua pelo seu usuário do GitHub
+    const repoName = 'NOME_DO_REPOSITÓRIO_AQUI';  // Substitua pelo nome do seu repositório
+    const fileName = 'mobiliario.json';  // Nome do arquivo onde os dados serão armazenados
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadMobiliario();
+    });
+
+    form.addEventListener('submit', function(event) {
+        event.preventDefault();
+
+        const numeroEtiqueta = document.getElementById('numeroEtiqueta').value;
+        const mobiliario = document.getElementById('mobiliario').value;
+        const local = document.getElementById('local').value;
+        const cor = document.getElementById('cor').value;
+        const imagemInput = document.getElementById('imagem');
+        const observacoes = document.getElementById('observacoes').value;
+        const dataInclusao = new Date().toLocaleDateString();
+
+        if (imagemInput.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const imagem = e.target.result; // Converte a imagem para Base64
+                const item = { numeroEtiqueta, mobiliario, local, cor, imagem, observacoes, dataInclusao };
+                addMobiliario(item);
+                saveMobiliario(item);
+                saveToGithub(item);  // Salvar no GitHub
+                form.reset();
+                document.getElementById('corPicker').value = '#ffffff';
+            };
+            reader.readAsDataURL(imagemInput.files[0]);
+        }
+    });
+
+    function addMobiliario(item) {
+        const newRow = mobiliarioTable.insertRow();
+        newRow.innerHTML = `
+            <td class="numeroEtiqueta">${item.numeroEtiqueta}</td>
+            <td class="mobiliario">${item.mobiliario}</td>
+            <td class="local">${item.local}</td>
+            <td class="cor" style="background-color: ${item.cor};">${item.cor}</td>
+            <td class="imagem">${item.imagem ? `<img src="${item.imagem}" alt="Imagem">` : 'N/A'}</td>
+            <td class="observacoes">${item.observacoes}</td>
+            <td class="data">${item.dataInclusao}</td>
+            <td>
+                <button onclick="verificarSenha('editar', this)">Editar</button>
+                <button onclick="verificarSenha('excluir', this)">Excluir</button>
+            </td>
+        `;
+    }
+
+    function loadMobiliario() {
+        fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${fileName}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `token ${githubToken}`
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.content) {
+                const mobiliario = JSON.parse(atob(data.content));  // Decodifica o conteúdo em Base64
+                mobiliario.forEach(item => addMobiliario(item));
+            }
+        })
+        .catch(error => console.error('Erro ao carregar dados do GitHub:', error));
+    }
+
+    function saveMobiliario(item) {
+        const mobiliario = JSON.parse(localStorage.getItem('mobiliario')) || [];
+        mobiliario.push(item);
+        localStorage.setItem('mobiliario', JSON.stringify(mobiliario));
+    }
+
+    function searchMobiliario() {
+        const searchInput = document.getElementById('search').value.toLowerCase();
+        const rows = mobiliarioTable.getElementsByTagName('tr');
+
+        for (let i = 1; i < rows.length; i++) {
+            const cells = rows[i].getElementsByTagName('td');
+            let found = false;
+
+            for (let j = 0; j < cells.length; j++) {
+                if (cells[j].textContent.toLowerCase().includes(searchInput)) {
+                    found = true;
+                    break;
+                }
+            }
+
+            rows[i].style.display = found ? '' : 'none';
+        }
+    }
+
+    function verificarSenha(tipo, button) {
+        const senha = prompt(`Digite a senha para ${tipo === 'editar' ? 'editar' : 'excluir'}:`);
+        if (senha === (tipo === 'editar' ? senhaEdicao : senhaExclusao)) {
+            if (tipo === 'editar') {
+                editarItem(button);
+            } else {
+                excluirItem(button);
+            }
+        } else {
+            alert('Senha incorreta!');
+        }
+    }
+
+    function editarItem(button) {
+        const row = button.closest('tr');
+        const numeroEtiqueta = row.querySelector('.numeroEtiqueta').textContent;
+        const mobiliario = row.querySelector('.mobiliario').textContent;
+        const local = row.querySelector('.local').textContent;
+        const cor = row.querySelector('.cor').textContent;
+        const observacoes = row.querySelector('.observacoes').textContent;
+
+        document.getElementById('numeroEtiqueta').value = numeroEtiqueta;
+        document.getElementById('mobiliario').value = mobiliario;
+        document.getElementById('local').value = local;
+        document.getElementById('cor').value = cor;
+        document.getElementById('observacoes').value = observacoes;
+
+        // Marca a linha como editando
+        row.classList.add('editing');
+        button.parentElement.querySelector('button[onclick*="excluir"]').style.display = 'none'; // Esconde botão de excluir
+    }
+
+    function excluirItem(button) {
+        const row = button.closest('tr');
+        row.remove();
+        alert('Item excluído com sucesso!');
+    }
+
+    function viewEditDeleteList() {
+        editDeleteListContainer.style.display = 'block';
+    }
+
+    function accessEditDeleteList() {
+        const senha = document.getElementById('listPassword').value;
+        if (senha === senhaLista) {
+            const mobiliario = JSON.parse(localStorage.getItem('mobiliario')) || [];
+            editDeleteList.innerHTML = mobiliario.map(item => `<div>${JSON.stringify(item)}</div>`).join('');
+        } else {
+            alert('Senha incorreta!');
+        }
+    }
+
+    function updateColorText() {
+        const colorPicker = document.getElementById('corPicker');
+        const colorInput = document.getElementById('cor');
+        colorInput.value = colorPicker.value; // Atualiza o campo de texto da cor com a seleção do color picker
+    }
+
+    function updateColorPicker() {
+        const colorInput = document.getElementById('cor');
+        const colorPicker = document.getElementById('corPicker');
+        colorPicker.value = colorInput.value; // Atualiza o color picker com a seleção do campo de texto da cor
+    }
+
+    function exportToExcel() {
+        const ws = XLSX.utils.table_to_sheet(mobiliarioTable);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Inventário");
+        
+        // Salva o arquivo Excel
+        XLSX.writeFile(wb, "inventario.xlsx");
+    }
+
+    function saveToGithub(item) {
+        const url = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${fileName}`;
+        fetch(url, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `token ${githubToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                message: 'Adicionando novo item ao inventário',
+                content: btoa(JSON.stringify(item)), // Codifica o item em Base64
+                sha: '' // Você pode deixar vazio se for um novo arquivo
+            })
+        })
+        .then(response => {
+            if (response.ok) {
+                console.log('Item salvo no GitHub com sucesso!');
+            } else {
+                console.error('Erro ao salvar no GitHub:', response.statusText);
+            }
+        })
+        .catch(error => console.error('Erro ao fazer requisição para o GitHub:', error));
+    }
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script> <!-- Adicione esta linha aqui também -->
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
