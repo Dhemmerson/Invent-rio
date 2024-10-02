@@ -112,35 +112,13 @@
         </tbody>
     </table>
     <button onclick="exportToExcel()">Exportar para Excel</button>
-    <button onclick="viewEditDeleteList()">Ver Itens Editados/Excluídos</button>
 
-    <!-- Fase 3 - Estrutura da Requisição -->
-    <h2>Fase 3: Estrutura da Requisição</h2>
-    <form id="fase3Form">
-        <input type="text" id="urlRequisicao" placeholder="URL da Requisição" required>
-        <input type="text" id="metodoRequisicao" placeholder="Método da Requisição (GET, POST, etc.)" required>
-        <input type="text" id="cabecalhosRequisicao" placeholder="Cabeçalhos da Requisição (JSON)" required>
-        <input type="text" id="corpoRequisicao" placeholder="Corpo da Requisição (JSON)" required>
-        <button type="submit">Enviar Requisição</button>
-    </form>
-</div>
-
-<div class="container" id="editDeleteListContainer" style="display: none;">
-    <h2>Itens Editados/Excluídos</h2>
-    <input type="password" id="listPassword" placeholder="Digite a senha para acessar" />
-    <button onclick="accessEditDeleteList()">Acessar Lista</button>
-    <div id="editDeleteList"></div>
 </div>
 
 <script>
     const form = document.getElementById('inventarioForm');
     const mobiliarioTable = document.getElementById('mobiliarioTable').getElementsByTagName('tbody')[0];
-    const editDeleteListContainer = document.getElementById('editDeleteListContainer');
-    const editDeleteList = document.getElementById('editDeleteList');
 
-    const senhaExclusao = 'senhaExcluir';
-    const senhaEdicao = 'senhaEditar';
-    const senhaLista = 'senhaLista';  // Senha para acessar a lista de itens editados/excluídos
     const githubToken = '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';  // Substitua pelo seu token de acesso pessoal
     const repoOwner = 'Dhemmerson';  // Substitua pelo seu usuário do GitHub
     const repoName = 'Invent-rio';  // Substitua pelo nome do seu repositório
@@ -176,38 +154,6 @@
         }
     });
 
-    // Adicione um evento de envio para o formulário da Fase 3
-    document.getElementById('fase3Form').addEventListener('submit', function(event) {
-        event.preventDefault();
-        
-        const url = document.getElementById('urlRequisicao').value;
-        const metodo = document.getElementById('metodoRequisicao').value;
-        const cabecalhos = JSON.parse(document.getElementById('cabecalhosRequisicao').value);
-        const corpo = JSON.parse(document.getElementById('corpoRequisicao').value);
-
-        fazerRequisicao(url, metodo, cabecalhos, corpo);
-    });
-
-    function fazerRequisicao(url, metodo, cabecalhos, corpo) {
-        fetch(url, {
-            method: metodo,
-            headers: {
-                ...cabecalhos,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(corpo)
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Requisição bem-sucedida:', data);
-            alert('Requisição bem-sucedida: ' + JSON.stringify(data));
-        })
-        .catch(error => {
-            console.error('Erro na requisição:', error);
-            alert('Erro na requisição: ' + error);
-        });
-    }
-
     function addMobiliario(item) {
         const newRow = mobiliarioTable.insertRow();
         newRow.innerHTML = `
@@ -235,7 +181,6 @@
 
         const corPicker = document.getElementById('corPicker');
         const corInput = document.getElementById('cor');
-        const imagemInput = document.getElementById('imagem');
 
         document.getElementById('numeroEtiqueta').value = numeroEtiqueta;
         document.getElementById('mobiliario').value = mobiliario;
@@ -265,7 +210,7 @@
         const rows = mobiliarioTable.getElementsByTagName('tr');
 
         for (let i = 0; i < rows.length; i++) {
-            const cell = rows[i].getElementsByTagName('td')[2]; // Local
+            const cell = rows[i].getElementsByTagName('td')[2]; // Coluna 'Local'
             if (cell) {
                 const txtValue = cell.textContent || cell.innerText;
                 rows[i].style.display = txtValue.toLowerCase().indexOf(filter) > -1 ? "" : "none";
@@ -275,97 +220,63 @@
 
     function updateColorText() {
         const corPicker = document.getElementById('corPicker');
-        document.getElementById('cor').value = corPicker.value;
+        const corInput = document.getElementById('cor');
+        corInput.value = corPicker.value;
     }
 
     function updateColorPicker() {
         const corInput = document.getElementById('cor');
-        document.getElementById('corPicker').value = corInput.value;
+        const corPicker = document.getElementById('corPicker');
+        corPicker.value = corInput.value;
     }
 
-    function exportToExcel() {
-        // Implementação para exportar a tabela para Excel
-        // Isso pode ser feito usando uma biblioteca como SheetJS ou uma solução similar
-        alert('Função de exportação não implementada.');
-    }
-
-    function viewEditDeleteList() {
-        const password = prompt('Digite a senha para acessar a lista de itens editados/excluídos:');
-        if (password === senhaLista) {
-            editDeleteListContainer.style.display = 'block';
-            // Carregar e exibir itens editados/excluídos, se houver
-        } else {
-            alert('Senha incorreta!');
-        }
-    }
-
-    function accessEditDeleteList() {
-        const password = document.getElementById('listPassword').value;
-        if (password === senhaLista) {
-            // Aqui você deve carregar os dados da lista de itens editados/excluídos
-            editDeleteList.innerHTML = 'Lista de itens editados/excluídos não implementada.';
-        } else {
-            alert('Senha incorreta!');
-        }
-    }
-
-    async function saveToGithub(item) {
-        const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${fileName}`, {
+    function saveToGithub(item) {
+        fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${fileName}`, {
             method: 'PUT',
             headers: {
                 'Authorization': `token ${githubToken}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                message: 'Atualização do arquivo de mobiliário',
-                content: btoa(JSON.stringify(item)),  // Converte o item para Base64
-                sha: await getFileSHA()  // Obtenha o SHA do arquivo existente, se necessário
-            })
-        });
-
-        if (response.ok) {
-            alert('Dados salvos com sucesso no GitHub!');
-        } else {
-            console.error('Erro ao salvar no GitHub:', await response.json());
-            alert('Erro ao salvar no GitHub!');
-        }
+            body: JSON.stringify(item),
+        })
+        .then(response => {
+            if (response.ok) {
+                console.log('Dados salvos no GitHub com sucesso!');
+            } else {
+                console.error('Erro ao salvar no GitHub:', response.statusText);
+            }
+        })
+        .catch(error => console.error('Erro na requisição:', error));
     }
 
-    async function getFileSHA() {
-        const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${fileName}`, {
-            headers: {
-                'Authorization': `token ${githubToken}`
-            }
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            return data.sha;  // Retorna o SHA do arquivo
-        } else {
-            console.error('Erro ao obter SHA do arquivo:', await response.json());
-            return null;
-        }
+    function loadMobiliario() {
+        fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${fileName}`)
+        .then(response => response.json())
+        .then(data => {
+            const base64Data = atob(data.content);
+            const jsonData = JSON.parse(base64Data);
+            jsonData.forEach(item => addMobiliario(item)); // Adiciona os itens à tabela
+        })
+        .catch(error => console.error('Erro ao carregar dados do GitHub:', error));
     }
 
-    async function loadMobiliario() {
-        const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${fileName}`, {
-            headers: {
-                'Authorization': `token ${githubToken}`
-            }
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            const items = JSON.parse(atob(data.content));  // Decodifica e converte de volta para objeto
-
-            items.forEach(item => addMobiliario(item));  // Adiciona cada item à tabela
-        } else {
-            console.error('Erro ao carregar dados do GitHub:', await response.json());
-        }
+    function exportToExcel() {
+        let table = document.getElementById("mobiliarioTable");
+        let rows = Array.from(table.rows);
+        let csvContent = rows.map(row => Array.from(row.cells).map(cell => cell.innerText).join(",")).join("\n");
+        let blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        let url = URL.createObjectURL(blob);
+        let link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", "mobiliario.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
 </script>
 </body>
 </html>
+
 
 
 
