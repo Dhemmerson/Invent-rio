@@ -113,6 +113,16 @@
     </table>
     <button onclick="exportToExcel()">Exportar para Excel</button>
     <button onclick="viewEditDeleteList()">Ver Itens Editados/Excluídos</button>
+
+    <!-- Fase 3 - Estrutura da Requisição -->
+    <h2>Fase 3: Estrutura da Requisição</h2>
+    <form id="fase3Form">
+        <input type="text" id="urlRequisicao" placeholder="URL da Requisição" required>
+        <input type="text" id="metodoRequisicao" placeholder="Método da Requisição (GET, POST, etc.)" required>
+        <input type="text" id="cabecalhosRequisicao" placeholder="Cabeçalhos da Requisição (JSON)" required>
+        <input type="text" id="corpoRequisicao" placeholder="Corpo da Requisição (JSON)" required>
+        <button type="submit">Enviar Requisição</button>
+    </form>
 </div>
 
 <div class="container" id="editDeleteListContainer" style="display: none;">
@@ -166,164 +176,169 @@
         }
     });
 
-    function addMobiliario(item) {
-        const newRow = mobiliarioTable.insertRow();
-        newRow.innerHTML = `
-            <td class="numeroEtiqueta">${item.numeroEtiqueta}</td>
-            <td class="mobiliario">${item.mobiliario}</td>
-            <td class="local">${item.local}</td>
-            <td class="cor" style="background-color: ${item.cor};">${item.cor}</td>
-            <td class="imagem">${item.imagem ? `<img src="${item.imagem}" alt="Imagem">` : 'N/A'}</td>
-            <td class="observacoes">${item.observacoes}</td>
-            <td class="data">${item.dataInclusao}</td>
-            <td>
-                <button onclick="verificarSenha('editar', this)">Editar</button>
-                <button onclick="verificarSenha('excluir', this)">Excluir</button>
-            </td>
-        `;
-    }
+    // Adicione um evento de envio para o formulário da Fase 3
+    document.getElementById('fase3Form').addEventListener('submit', function(event) {
+        event.preventDefault();
+        
+        const url = document.getElementById('urlRequisicao').value;
+        const metodo = document.getElementById('metodoRequisicao').value;
+        const cabecalhos = JSON.parse(document.getElementById('cabecalhosRequisicao').value);
+        const corpo = JSON.parse(document.getElementById('corpoRequisicao').value);
 
-    function loadMobiliario() {
-        fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${fileName}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `token ${githubToken}`
-            }
+        fazerRequisicao(url, metodo, cabecalhos, corpo);
+    });
+
+    function fazerRequisicao(url, metodo, cabecalhos, corpo) {
+        fetch(url, {
+            method: metodo,
+            headers: cabecalhos,
+            body: JSON.stringify(corpo)
         })
         .then(response => response.json())
         .then(data => {
-            if (data.content) {
-                const mobiliario = JSON.parse(atob(data.content));  // Decodifica o conteúdo em Base64
-                mobiliario.forEach(item => addMobiliario(item));
-            }
+            console.log('Requisição bem-sucedida:', data);
+            alert('Requisição enviada com sucesso!');
         })
-        .catch(error => console.error('Erro ao carregar dados do GitHub:', error));
+        .catch((error) => {
+            console.error('Erro na requisição:', error);
+            alert('Erro ao enviar a requisição.');
+        });
+    }
+
+    function addMobiliario(item) {
+        const row = mobiliarioTable.insertRow();
+        row.insertCell(0).innerText = item.numeroEtiqueta;
+        row.insertCell(1).innerText = item.mobiliario;
+        row.insertCell(2).innerText = item.local;
+        row.insertCell(3).innerText = item.cor;
+        const imgCell = row.insertCell(4);
+        const img = document.createElement('img');
+        img.src = item.imagem;
+        imgCell.appendChild(img);
+        row.insertCell(5).innerText = item.observacoes;
+        row.insertCell(6).innerText = item.dataInclusao;
+
+        const actionsCell = row.insertCell(7);
+        const editButton = document.createElement('button');
+        editButton.innerText = 'Editar';
+        editButton.onclick = () => editMobiliario(row, item);
+        actionsCell.appendChild(editButton);
+
+        const deleteButton = document.createElement('button');
+        deleteButton.innerText = 'Excluir';
+        deleteButton.onclick = () => deleteMobiliario(row, item);
+        actionsCell.appendChild(deleteButton);
+    }
+
+    function editMobiliario(row, item) {
+        const numeroEtiqueta = prompt('Digite o novo número da etiqueta:', item.numeroEtiqueta);
+        if (numeroEtiqueta !== null) {
+            item.numeroEtiqueta = numeroEtiqueta;
+        }
+        const mobiliario = prompt('Digite o novo mobiliário:', item.mobiliario);
+        if (mobiliario !== null) {
+            item.mobiliario = mobiliario;
+        }
+        const local = prompt('Digite o novo local:', item.local);
+        if (local !== null) {
+            item.local = local;
+        }
+        const cor = prompt('Digite a nova cor:', item.cor);
+        if (cor !== null) {
+            item.cor = cor;
+        }
+        const observacoes = prompt('Digite novas observações:', item.observacoes);
+        if (observacoes !== null) {
+            item.observacoes = observacoes;
+        }
+
+        // Atualiza a tabela com as novas informações
+        row.cells[0].innerText = item.numeroEtiqueta;
+        row.cells[1].innerText = item.mobiliario;
+        row.cells[2].innerText = item.local;
+        row.cells[3].innerText = item.cor;
+        row.cells[5].innerText = item.observacoes;
+
+        // Registra a edição
+        alert('Mobiliário editado com sucesso!');
+    }
+
+    function deleteMobiliario(row, item) {
+        const motivo = prompt('Qual o motivo da exclusão?');
+        if (motivo) {
+            // Adicione aqui a lógica para registrar a exclusão
+            alert(`Mobiliário excluído: ${motivo}`);
+            mobiliarioTable.deleteRow(row.rowIndex - 1);
+        }
+    }
+
+    function loadMobiliario() {
+        // Carregar mobiliário do GitHub aqui
     }
 
     function saveMobiliario(item) {
-        const mobiliario = JSON.parse(localStorage.getItem('mobiliario')) || [];
-        mobiliario.push(item);
-        localStorage.setItem('mobiliario', JSON.stringify(mobiliario));
+        // Salvar mobiliário no localStorage
+        let mobiliarios = JSON.parse(localStorage.getItem('mobiliarios')) || [];
+        mobiliarios.push(item);
+        localStorage.setItem('mobiliarios', JSON.stringify(mobiliarios));
+    }
+
+    function saveToGithub(item) {
+        // Salvar mobiliário no GitHub aqui
     }
 
     function searchMobiliario() {
-        const searchInput = document.getElementById('search').value.toLowerCase();
+        const input = document.getElementById('search').value.toLowerCase();
         const rows = mobiliarioTable.getElementsByTagName('tr');
-
-        for (let i = 1; i < rows.length; i++) {
+        for (let i = 0; i < rows.length; i++) {
             const cells = rows[i].getElementsByTagName('td');
             let found = false;
-
             for (let j = 0; j < cells.length; j++) {
-                if (cells[j].textContent.toLowerCase().includes(searchInput)) {
-                    found = true;
-                    break;
+                if (cells[j]) {
+                    const txtValue = cells[j].textContent || cells[j].innerText;
+                    if (txtValue.toLowerCase().indexOf(input) > -1) {
+                        found = true;
+                        break;
+                    }
                 }
             }
-
-            rows[i].style.display = found ? '' : 'none';
-        }
-    }
-
-    function verificarSenha(tipo, button) {
-        const senha = prompt(`Digite a senha para ${tipo === 'editar' ? 'editar' : 'excluir'}:`);
-        if (senha === (tipo === 'editar' ? senhaEdicao : senhaExclusao)) {
-            if (tipo === 'editar') {
-                editarItem(button);
-            } else {
-                excluirItem(button);
-            }
-        } else {
-            alert('Senha incorreta!');
-        }
-    }
-
-    function editarItem(button) {
-        const row = button.closest('tr');
-        const numeroEtiqueta = row.querySelector('.numeroEtiqueta').textContent;
-        const mobiliario = row.querySelector('.mobiliario').textContent;
-        const local = row.querySelector('.local').textContent;
-        const cor = row.querySelector('.cor').textContent;
-        const observacoes = row.querySelector('.observacoes').textContent;
-
-        document.getElementById('numeroEtiqueta').value = numeroEtiqueta;
-        document.getElementById('mobiliario').value = mobiliario;
-        document.getElementById('local').value = local;
-        document.getElementById('cor').value = cor;
-        document.getElementById('observacoes').value = observacoes;
-
-        // Marca a linha como editando
-        row.classList.add('editing');
-        button.parentElement.querySelector('button[onclick*="excluir"]').style.display = 'none'; // Esconde botão de excluir
-    }
-
-    function excluirItem(button) {
-        const row = button.closest('tr');
-        row.remove();
-        alert('Item excluído com sucesso!');
-    }
-
-    function viewEditDeleteList() {
-        editDeleteListContainer.style.display = 'block';
-    }
-
-    function accessEditDeleteList() {
-        const senha = document.getElementById('listPassword').value;
-        if (senha === senhaLista) {
-            const mobiliario = JSON.parse(localStorage.getItem('mobiliario')) || [];
-            editDeleteList.innerHTML = mobiliario.map(item => `<div>${JSON.stringify(item)}</div>`).join('');
-        } else {
-            alert('Senha incorreta!');
+            rows[i].style.display = found ? "" : "none";
         }
     }
 
     function updateColorText() {
         const colorPicker = document.getElementById('corPicker');
-        const colorInput = document.getElementById('cor');
-        colorInput.value = colorPicker.value; // Atualiza o campo de texto da cor com a seleção do color picker
+        document.getElementById('cor').value = colorPicker.value;  // Atualiza o campo de texto com a cor selecionada
     }
 
     function updateColorPicker() {
         const colorInput = document.getElementById('cor');
-        const colorPicker = document.getElementById('corPicker');
-        colorPicker.value = colorInput.value; // Atualiza o color picker com a seleção do campo de texto da cor
+        document.getElementById('corPicker').value = colorInput.value;  // Atualiza o seletor de cor com o valor do campo de texto
     }
 
     function exportToExcel() {
-        const ws = XLSX.utils.table_to_sheet(mobiliarioTable);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Inventário");
-        
-        // Salva o arquivo Excel
-        XLSX.writeFile(wb, "inventario.xlsx");
+        // Exportar tabela para Excel aqui
     }
 
-    function saveToGithub(item) {
-        const url = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${fileName}`;
-        fetch(url, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `token ${githubToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                message: 'Adicionando novo item ao inventário',
-                content: btoa(JSON.stringify(item)), // Codifica o item em Base64
-                sha: '' // Você pode deixar vazio se for um novo arquivo
-            })
-        })
-        .then(response => {
-            if (response.ok) {
-                console.log('Item salvo no GitHub com sucesso!');
-            } else {
-                console.error('Erro ao salvar no GitHub:', response.statusText);
-            }
-        })
-        .catch(error => console.error('Erro ao fazer requisição para o GitHub:', error));
+    function viewEditDeleteList() {
+        const password = prompt('Digite a senha para acessar a lista de itens editados/excluídos:');
+        if (password === senhaLista) {
+            editDeleteListContainer.style.display = 'block';
+            // Carregar a lista de itens editados/excluídos aqui
+        } else {
+            alert('Senha incorreta!');
+        }
+    }
+
+    function accessEditDeleteList() {
+        const password = document.getElementById('listPassword').value;
+        if (password === senhaLista) {
+            // Exibir a lista de itens editados/excluídos aqui
+        } else {
+            alert('Senha incorreta!');
+        }
     }
 </script>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script> <!-- Adicione esta linha aqui também -->
 </body>
 </html>
 
