@@ -1,1 +1,17 @@
-[]
+<table id="mobiliarioTable">
+    <thead>
+        <tr>
+            <th>Número da Etiqueta</th>
+            <th>Mobiliário</th>
+            <th>Local</th>
+            <th>Cor</th>
+            <th>Imagem</th>
+            <th>Observações</th>
+            <th>Data de Inclusão</th>
+            <th>Ações</th>
+        </tr>
+    </thead>
+    <tbody>
+        <!-- Itens serão adicionados aqui -->
+    </tbody>
+</table>
