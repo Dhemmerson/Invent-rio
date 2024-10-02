@@ -121,7 +121,7 @@
 
     const githubToken = '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';  // Substitua pelo seu token de acesso pessoal
     const repoOwner = 'Dhemmerson';  // Substitua pelo seu usuário do GitHub
-    const repoName = 'Invent-rio';  // Substitua pelo nome do seu repositório
+    const repoName = 'Dhemmerson/Invent-rio';  // Substitua pelo nome do seu repositório
     const fileName = 'mobiliario.json';  // Nome do arquivo onde os dados serão armazenados
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -226,94 +226,103 @@
     }
 
     function updateColorPicker() {
-        const colorText = document.getElementById('cor');
-        document.getElementById('corPicker').value = colorText.value;
+        const colorInput = document.getElementById('cor');
+        document.getElementById('corPicker').value = colorInput.value;
     }
 
     async function loadMobiliario() {
-        const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${fileName}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `token ${githubToken}`
-            }
-        });
+        try {
+            const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${fileName}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `token ${githubToken}`
+                }
+            });
 
-        if (response.ok) {
-            const data = await response.json();
-            const content = atob(data.content);
-            const items = JSON.parse(content);
-            items.forEach(item => addMobiliario(item));
-        } else {
-            console.error('Erro ao carregar os dados do GitHub:', response.statusText);
+            if (response.ok) {
+                const data = await response.json();
+                const content = atob(data.content);
+                const items = JSON.parse(content);
+                items.forEach(item => addMobiliario(item));
+            } else {
+                console.error('Erro ao carregar os dados do GitHub:', response.statusText);
+            }
+        } catch (error) {
+            console.error('Erro ao carregar os dados:', error);
         }
     }
 
     async function saveToGithub() {
-        const items = [];
-        for (let i = 0; i < mobiliarioTable.rows.length; i++) {
-            const row = mobiliarioTable.rows[i];
-            const item = {
-                numeroEtiqueta: row.cells[0].innerText,
-                mobiliario: row.cells[1].innerText,
-                local: row.cells[2].innerText,
-                cor: row.cells[3].innerText,
-                imagem: row.cells[4].getElementsByTagName('img')[0].src,
-                observacoes: row.cells[5].innerText,
-                dataInclusao: row.cells[6].innerText,
-            };
-            items.push(item);
-        }
+        try {
+            const items = [];
+            for (let i = 0; i < mobiliarioTable.rows.length; i++) {
+                const row = mobiliarioTable.rows[i];
+                const item = {
+                    numeroEtiqueta: row.cells[0].innerText,
+                    mobiliario: row.cells[1].innerText,
+                    local: row.cells[2].innerText,
+                    cor: row.cells[3].innerText,
+                    imagem: row.cells[4].getElementsByTagName('img')[0].src,
+                    observacoes: row.cells[5].innerText,
+                    dataInclusao: row.cells[6].innerText,
+                };
+                items.push(item);
+            }
 
-        const jsonContent = JSON.stringify(items, null, 2);
-        const base64Content = btoa(jsonContent);
+            const jsonContent = JSON.stringify(items, null, 2);
+            const base64Content = btoa(jsonContent);
 
-        const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${fileName}`, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `token ${githubToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                message: 'Atualização do arquivo mobiliario.json',
-                content: base64Content,
-                sha: await getFileSha() // Adiciona o sha do arquivo
-            })
-        });
+            const sha = await getFileSha();
 
-        if (!response.ok) {
-            console.error('Erro ao salvar os dados no GitHub:', response.statusText);
+            const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${fileName}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${githubToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: 'Atualização do arquivo mobiliario.json',
+                    content: base64Content,
+                    sha: sha
+                })
+            });
+
+            if (!response.ok) {
+                console.error('Erro ao salvar os dados no GitHub:', response.statusText);
+            }
+        } catch (error) {
+            console.error('Erro ao salvar os dados:', error);
         }
     }
 
     async function getFileSha() {
-        const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${fileName}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `token ${githubToken}`
+        try {
+            const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${fileName}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `token ${githubToken}`
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                return data.sha;
             }
-        });
-        const data = await response.json();
-        return data.sha; // Retorna o sha do arquivo
+        } catch (error) {
+            console.error('Erro ao obter SHA do arquivo:', error);
+        }
+        return null;  // Retorna null se não for possível obter o SHA
     }
 
     function exportToExcel() {
-        let table = document.getElementById("mobiliarioTable");
-        let rows = [...table.rows];
-        let csvContent = "data:text/csv;charset=utf-8," 
-            + rows.map(e => [...e.cells].map(cell => cell.innerText).join(",")).join("\n");
-        let encodedUri = encodeURI(csvContent);
-        let link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "mobiliario.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        // Função para exportar os dados da tabela para um arquivo Excel
+        // Implementação depende da sua necessidade específica
+        alert('Função de exportação para Excel ainda não implementada.');
     }
 </script>
 
 </body>
 </html>
-
 
 
 
