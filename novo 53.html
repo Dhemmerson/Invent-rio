@@ -111,6 +111,7 @@
         <tbody>
         </tbody>
     </table>
+    <button onclick="exportToExcel()">Exportar para Excel</button>
     <button onclick="viewEditDeleteList()">Ver Itens Editados/Excluídos</button>
 </div>
 
@@ -130,6 +131,10 @@
     const senhaExclusao = 'senhaExcluir';
     const senhaEdicao = 'senhaEditar';
     const senhaLista = 'senhaLista';  // Senha para acessar a lista de itens editados/excluídos
+    const githubToken = 'SEU_TOKEN_DE_ACESSO_AQUI';  // Substitua pelo seu token de acesso pessoal
+    const repoOwner = 'SEU_USUÁRIO_AQUI';  // Substitua pelo seu usuário do GitHub
+    const repoName = 'NOME_DO_REPOSITÓRIO_AQUI';  // Substitua pelo nome do seu repositório
+    const fileName = 'mobiliario.json';  // Nome do arquivo onde os dados serão armazenados
 
     document.addEventListener('DOMContentLoaded', () => {
         loadMobiliario();
@@ -153,6 +158,7 @@
                 const item = { numeroEtiqueta, mobiliario, local, cor, imagem, observacoes, dataInclusao };
                 addMobiliario(item);
                 saveMobiliario(item);
+                saveToGithub(item);  // Salvar no GitHub
                 form.reset();
                 document.getElementById('corPicker').value = '#ffffff';
             };
@@ -178,8 +184,20 @@
     }
 
     function loadMobiliario() {
-        const mobiliario = JSON.parse(localStorage.getItem('mobiliario')) || [];
-        mobiliario.forEach(item => addMobiliario(item));
+        fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${fileName}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `token ${githubToken}`
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.content) {
+                const mobiliario = JSON.parse(atob(data.content));  // Decodifica o conteúdo em Base64
+                mobiliario.forEach(item => addMobiliario(item));
+            }
+        })
+        .catch(error => console.error('Erro ao carregar dados do GitHub:', error));
     }
 
     function saveMobiliario(item) {
@@ -188,176 +206,72 @@
         localStorage.setItem('mobiliario', JSON.stringify(mobiliario));
     }
 
-    function verificarSenha(acao, button) {
-        const senha = acao === 'editar' ? senhaEdicao : senhaExclusao;
-        const resposta = prompt('Digite a senha:');
-        if (resposta === senha) {
-            const row = button.parentElement.parentElement;
-            if (acao === 'editar') {
-                enterEditMode(row);
-            } else {
-                const motivoExclusao = prompt('Qual o motivo da exclusão?');
-                const numeroEtiqueta = row.cells[0].innerText;
-                const mobiliario = JSON.parse(localStorage.getItem('mobiliario')) || [];
-                const item = mobiliario.find(m => m.numeroEtiqueta === numeroEtiqueta);
+    function searchMobiliario() {
+        const searchInput = document.getElementById('search').value.toLowerCase();
+        const rows = mobiliarioTable.getElementsByTagName('tr');
 
-                if (item) {
-                    editDeleteList.innerHTML += `<p>${new Date().toLocaleDateString()}: ${item.mobiliario} excluído. Motivo: ${motivoExclusao}</p>`;
-                    
-                    // Remove o item da tabela e do localStorage
-                    const index = mobiliario.indexOf(item);
-                    mobiliario.splice(index, 1);
-                    localStorage.setItem('mobiliario', JSON.stringify(mobiliario));
-                    row.remove();
+        for (let i = 1; i < rows.length; i++) {
+            const cells = rows[i].getElementsByTagName('td');
+            let found = false;
+
+            for (let j = 0; j < cells.length; j++) {
+                if (cells[j].textContent.toLowerCase().includes(searchInput)) {
+                    found = true;
+                    break;
                 }
+            }
+
+            rows[i].style.display = found ? '' : 'none';
+        }
+    }
+
+    function verificarSenha(tipo, button) {
+        const senha = prompt(`Digite a senha para ${tipo === 'editar' ? 'editar' : 'excluir'}:`);
+        if (senha === (tipo === 'editar' ? senhaEdicao : senhaExclusao)) {
+            if (tipo === 'editar') {
+                editarItem(button);
+            } else {
+                excluirItem(button);
             }
         } else {
             alert('Senha incorreta!');
         }
     }
 
-    function enterEditMode(row) {
-        const numeroEtiqueta = row.querySelector('.numeroEtiqueta').innerText;
-        const mobiliario = row.querySelector('.mobiliario').innerText;
-        const local = row.querySelector('.local').innerText;
-        const cor = row.querySelector('.cor').style.backgroundColor;
-        const observacoes = row.querySelector('.observacoes').innerText;
-        const imagem = row.querySelector('.imagem img') ? row.querySelector('.imagem img').src : '';
+    function editarItem(button) {
+        const row = button.closest('tr');
+        const numeroEtiqueta = row.querySelector('.numeroEtiqueta').textContent;
+        const mobiliario = row.querySelector('.mobiliario').textContent;
+        const local = row.querySelector('.local').textContent;
+        const cor = row.querySelector('.cor').textContent;
+        const observacoes = row.querySelector('.observacoes').textContent;
 
+        document.getElementById('numeroEtiqueta').value = numeroEtiqueta;
+        document.getElementById('mobiliario').value = mobiliario;
+        document.getElementById('local').value = local;
+        document.getElementById('cor').value = cor;
+        document.getElementById('observacoes').value = observacoes;
+
+        // Marca a linha como editando
         row.classList.add('editing');
-        row.innerHTML = `
-            <td><input type="text" value="${numeroEtiqueta}" required></td>
-            <td><input type="text" value="${mobiliario}" required></td>
-            <td>
-                <select required>
-                    <option value="Recepção" ${local === 'Recepção' ? 'selected' : ''}>Recepção</option>
-                    <option value="Sala Comercial" ${local === 'Sala Comercial' ? 'selected' : ''}>Sala Comercial</option>
-                    <option value="Sala Financeiro" ${local === 'Sala Financeiro' ? 'selected' : ''}>Sala Financeiro</option>
-                    <option value="Sala SAC/Administrativo" ${local === 'Sala SAC/Administrativo' ? 'selected' : ''}>Sala SAC/Administrativo</option>
-                    <option value="Sala CEO" ${local === 'Sala CEO' ? 'selected' : ''}>Sala CEO</option>
-                    <option value="Sala de Descanso" ${local === 'Sala de Descanso' ? 'selected' : ''}>Sala de Descanso</option>
-                    <option value="Copa" ${local === 'Copa' ? 'selected' : ''}>Copa</option>
-                </select>
-            </td>
-            <td>
-                <input type="color" value="${cor}" onchange="updateColorText()">
-                <input type="text" value="${cor}" oninput="updateColorPicker()">
-            </td>
-            <td><input type="file" accept="image/*"><img src="${imagem}" alt="Imagem"></td>
-            <td><input type="text" value="${observacoes}"></td>
-            <td>
-                <button onclick="saveEdit(row)">Salvar</button>
-                <button onclick="cancelEdit(row)">Cancelar</button>
-            </td>
-        `;
+        button.parentElement.querySelector('button[onclick*="excluir"]').style.display = 'none'; // Esconde botão de excluir
     }
 
-    function saveEdit(row) {
-        const numeroEtiquetaInput = row.querySelector('input[type="text"]').value;
-        const mobiliarioInput = row.querySelector('input[type="text"]').value;
-        const localInput = row.querySelector('select').value;
-        const corInput = row.querySelector('input[type="color"]').value;
-        const observacoesInput = row.querySelector('input[type="text"]').value; // Certifique-se de que está pegando o campo correto
-        const imagemInput = row.querySelector('input[type="file"]');
-
-        let imagem;
-        if (imagemInput.files[0]) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                imagem = e.target.result; // Converte a imagem para Base64
-                updateRow(row, numeroEtiquetaInput, mobiliarioInput, localInput, corInput, observacoesInput, imagem);
-            };
-            reader.readAsDataURL(imagemInput.files[0]);
-        } else {
-            // Se não houver nova imagem, atualize apenas os textos
-            updateRow(row, numeroEtiquetaInput, mobiliarioInput, localInput, corInput, observacoesInput, null);
-        }
-    }
-
-    function updateRow(row, numeroEtiquetaInput, mobiliarioInput, localInput, corInput, observacoesInput, imagem) {
-        // Atualiza as células com os novos valores
-        row.querySelector('.numeroEtiqueta').innerText = numeroEtiquetaInput;
-        row.querySelector('.mobiliario').innerText = mobiliarioInput;
-        row.querySelector('.local').innerText = localInput;
-        row.querySelector('.cor').style.backgroundColor = corInput;
-        row.querySelector('.observacoes').innerText = observacoesInput; // Atualização correta para o campo Observações
-
-        // Atualiza a imagem se fornecida
-        if (imagem) {
-            row.querySelector('.imagem').innerHTML = `<img src="${imagem}" alt="Imagem">`;
-        }
-
-        // Atualiza localStorage
-        const mobiliario = JSON.parse(localStorage.getItem('mobiliario')) || [];
-        const index = mobiliario.findIndex(item => item.numeroEtiqueta === numeroEtiquetaInput);
-        if (index !== -1) {
-            mobiliario[index] = {
-                ...mobiliario[index],
-                mobiliario: mobiliarioInput,
-                local: localInput,
-                cor: corInput,
-                observacoes: observacoesInput,
-                imagem: imagem || mobiliario[index].imagem // Mantém a imagem anterior se não for fornecida
-            };
-            localStorage.setItem('mobiliario', JSON.stringify(mobiliario));
-        }
-
-        row.classList.remove('editing'); // Remove a classe de edição
-        const actionsCell = row.querySelector('td:last-child');
-        actionsCell.innerHTML = `
-            <button onclick="verificarSenha('editar', this)">Editar</button>
-            <button onclick="verificarSenha('excluir', this)">Excluir</button>
-        `;
-    }
-
-    function cancelEdit(row) {
-        const numeroEtiqueta = row.querySelector('.numeroEtiqueta').innerText;
-        const mobiliario = row.querySelector('.mobiliario').innerText;
-        const local = row.querySelector('.local').innerText;
-        const cor = row.querySelector('.cor').style.backgroundColor;
-        const observacoes = row.querySelector('.observacoes').innerText;
-        const imagem = row.querySelector('.imagem img') ? row.querySelector('.imagem img').src : '';
-
-        row.classList.remove('editing');
-        row.innerHTML = `
-            <td class="numeroEtiqueta">${numeroEtiqueta}</td>
-            <td class="mobiliario">${mobiliario}</td>
-            <td class="local">${local}</td>
-            <td class="cor" style="background-color: ${cor};">${cor}</td>
-            <td class="imagem">${imagem ? `<img src="${imagem}" alt="Imagem">` : 'N/A'}</td>
-            <td class="observacoes">${observacoes}</td>
-            <td>
-                <button onclick="verificarSenha('editar', this)">Editar</button>
-                <button onclick="verificarSenha('excluir', this)">Excluir</button>
-            </td>
-        `;
-    }
-
-    function searchMobiliario() {
-        const input = document.getElementById('search').value.toLowerCase();
-        const rows = mobiliarioTable.getElementsByTagName('tr');
-        for (let i = 0; i < rows.length; i++) {
-            const cells = rows[i].getElementsByTagName('td');
-            let found = false;
-            for (let j = 0; j < cells.length; j++) {
-                if (cells[j].innerText.toLowerCase().includes(input)) {
-                    found = true;
-                    break;
-                }
-            }
-            rows[i].style.display = found ? '' : 'none';
-        }
+    function excluirItem(button) {
+        const row = button.closest('tr');
+        row.remove();
+        alert('Item excluído com sucesso!');
     }
 
     function viewEditDeleteList() {
         editDeleteListContainer.style.display = 'block';
-        editDeleteList.innerHTML = ''; // Limpa a lista
     }
 
     function accessEditDeleteList() {
         const senha = document.getElementById('listPassword').value;
         if (senha === senhaLista) {
-            editDeleteList.innerHTML = editDeleteList.innerHTML; // Carrega a lista de edição/exclusão
+            const mobiliario = JSON.parse(localStorage.getItem('mobiliario')) || [];
+            editDeleteList.innerHTML = mobiliario.map(item => `<div>${JSON.stringify(item)}</div>`).join('');
         } else {
             alert('Senha incorreta!');
         }
@@ -365,20 +279,53 @@
 
     function updateColorText() {
         const colorPicker = document.getElementById('corPicker');
-        const colorText = document.getElementById('cor');
-        colorText.value = colorPicker.value;
+        const colorInput = document.getElementById('cor');
+        colorInput.value = colorPicker.value; // Atualiza o campo de texto da cor com a seleção do color picker
     }
 
     function updateColorPicker() {
-        const colorText = document.getElementById('cor');
+        const colorInput = document.getElementById('cor');
         const colorPicker = document.getElementById('corPicker');
-        colorPicker.value = colorText.value;
+        colorPicker.value = colorInput.value; // Atualiza o color picker com a seleção do campo de texto da cor
+    }
+
+    function exportToExcel() {
+        const ws = XLSX.utils.table_to_sheet(mobiliarioTable);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Inventário");
+        
+        // Salva o arquivo Excel
+        XLSX.writeFile(wb, "inventario.xlsx");
+    }
+
+    function saveToGithub(item) {
+        const url = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${fileName}`;
+        fetch(url, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `token ${githubToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                message: 'Adicionando novo item ao inventário',
+                content: btoa(JSON.stringify(item)), // Codifica o item em Base64
+                sha: '' // Você pode deixar vazio se for um novo arquivo
+            })
+        })
+        .then(response => {
+            if (response.ok) {
+                console.log('Item salvo no GitHub com sucesso!');
+            } else {
+                console.error('Erro ao salvar no GitHub:', response.statusText);
+            }
+        })
+        .catch(error => console.error('Erro ao fazer requisição para o GitHub:', error));
     }
 </script>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script> <!-- Adicione esta linha aqui também -->
 </body>
 </html>
-
 
 
 
