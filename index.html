@@ -220,29 +220,14 @@
         }
     }
 
-    function exportToExcel() {
-        let table = document.getElementById('mobiliarioTable');
-        let rows = table.querySelectorAll('tr');
-        let csv = [];
+    function updateColorText() {
+        const colorInput = document.getElementById('corPicker');
+        document.getElementById('cor').value = colorInput.value;
+    }
 
-        for (let i = 0; i < rows.length; i++) {
-            let cols = rows[i].querySelectorAll('td, th');
-            let csvRow = [];
-            for (let j = 0; j < cols.length; j++) {
-                csvRow.push(cols[j].innerText);
-            }
-            csv.push(csvRow.join(','));        
-        }
-
-        let csvString = csv.join('\n');
-        let blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-        let url = URL.createObjectURL(blob);
-        let a = document.createElement('a');
-        a.href = url;
-        a.setAttribute('download', 'inventario.csv');
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+    function updateColorPicker() {
+        const colorText = document.getElementById('cor');
+        document.getElementById('corPicker').value = colorText.value;
     }
 
     async function loadMobiliario() {
@@ -265,23 +250,22 @@
 
     async function saveToGithub() {
         const items = [];
-        const rows = mobiliarioTable.getElementsByTagName('tr');
-        for (let row of rows) {
-            const cells = row.getElementsByTagName('td');
+        for (let i = 0; i < mobiliarioTable.rows.length; i++) {
+            const row = mobiliarioTable.rows[i];
             const item = {
-                numeroEtiqueta: cells[0].innerText,
-                mobiliario: cells[1].innerText,
-                local: cells[2].innerText,
-                cor: cells[3].innerText,
-                imagem: cells[4].getElementsByTagName('img')[0].src,
-                observacoes: cells[5].innerText,
-                dataInclusao: cells[6].innerText,
+                numeroEtiqueta: row.cells[0].innerText,
+                mobiliario: row.cells[1].innerText,
+                local: row.cells[2].innerText,
+                cor: row.cells[3].innerText,
+                imagem: row.cells[4].getElementsByTagName('img')[0].src,
+                observacoes: row.cells[5].innerText,
+                dataInclusao: row.cells[6].innerText,
             };
             items.push(item);
         }
 
-        const sha = await getFileSha(); // Obtendo o SHA do arquivo
-        const body = JSON.stringify({ message: 'Atualizando o inventário', content: btoa(JSON.stringify(items)), sha });
+        const jsonContent = JSON.stringify(items, null, 2);
+        const base64Content = btoa(jsonContent);
 
         const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${fileName}`, {
             method: 'PUT',
@@ -289,13 +273,15 @@
                 'Authorization': `token ${githubToken}`,
                 'Content-Type': 'application/json'
             },
-            body: body
+            body: JSON.stringify({
+                message: 'Atualização do arquivo mobiliario.json',
+                content: base64Content,
+                sha: await getFileSha() // Adiciona o sha do arquivo
+            })
         });
 
-        if (response.ok) {
-            console.log('Inventário salvo no GitHub com sucesso!');
-        } else {
-            console.error('Erro ao salvar no GitHub:', response.statusText);
+        if (!response.ok) {
+            console.error('Erro ao salvar os dados no GitHub:', response.statusText);
         }
     }
 
@@ -306,25 +292,23 @@
                 'Authorization': `token ${githubToken}`
             }
         });
-        if (response.ok) {
-            const data = await response.json();
-            return data.sha; // Retorna o SHA do arquivo
-        } else {
-            console.error('Erro ao buscar o SHA do arquivo:', response.statusText);
-            return null;
-        }
+        const data = await response.json();
+        return data.sha; // Retorna o sha do arquivo
     }
 
-    function updateColorText() {
-        const colorInput = document.getElementById('corPicker');
-        document.getElementById('cor').value = colorInput.value;
+    function exportToExcel() {
+        let table = document.getElementById("mobiliarioTable");
+        let rows = [...table.rows];
+        let csvContent = "data:text/csv;charset=utf-8," 
+            + rows.map(e => [...e.cells].map(cell => cell.innerText).join(",")).join("\n");
+        let encodedUri = encodeURI(csvContent);
+        let link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "mobiliario.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     }
-
-    function updateColorPicker() {
-        const colorInput = document.getElementById('cor');
-        document.getElementById('corPicker').value = colorInput.value;
-    }
-
 </script>
 
 </body>
