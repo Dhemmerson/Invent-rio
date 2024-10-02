@@ -145,7 +145,6 @@
                 const imagem = e.target.result; // Converte a imagem para Base64
                 const item = { numeroEtiqueta, mobiliario, local, cor, imagem, observacoes, dataInclusao };
                 addMobiliario(item);
-                saveMobiliario();  // Salvar localmente
                 saveToGithub();  // Salvar no GitHub
                 form.reset();
                 document.getElementById('corPicker').value = '#ffffff';
@@ -198,11 +197,8 @@
     function deleteItem(button) {
         const row = button.parentNode.parentNode;
         const numeroEtiqueta = row.cells[0].innerText;
-
-        if (confirm(`Tem certeza que deseja excluir o item "${numeroEtiqueta}"?`)) {
-            row.remove();
-            saveToGithub();  // Salvar alterações no GitHub após exclusão
-        }
+        row.remove();
+        saveToGithub();  // Salvar alterações no GitHub após exclusão
     }
 
     function searchMobiliario() {
@@ -249,58 +245,25 @@
         document.body.removeChild(a);
     }
 
-    function saveMobiliario() {
-        const items = [];
-        const rows = mobiliarioTable.getElementsByTagName('tr');
-        for (let row of rows) {
-            const cells = row.getElementsByTagName('td');
-            const item = {
-                numeroEtiqueta: cells[0].innerText,
-                mobiliario: cells[1].innerText,
-                local: cells[2].innerText,
-                cor: cells[3].innerText,
-                imagem: cells[4].getElementsByTagName('img')[0].src,
-                observacoes: cells[5].innerText,
-                dataInclusao: cells[6].innerText,
-            };
-            items.push(item);
-        }
-        localStorage.setItem('mobiliario', JSON.stringify(items));
-    }
-
-    function loadMobiliario() {
-        const items = JSON.parse(localStorage.getItem('mobiliario')) || [];
-        items.forEach(item => addMobiliario(item));
-    }
-
-    function updateColorText() {
-        const colorInput = document.getElementById('corPicker');
-        document.getElementById('cor').value = colorInput.value;
-    }
-
-    function updateColorPicker() {
-        const colorInput = document.getElementById('cor');
-        document.getElementById('corPicker').value = colorInput.value;
-    }
-
-    async function getFileSha() {
+    async function loadMobiliario() {
         const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${fileName}`, {
             method: 'GET',
             headers: {
                 'Authorization': `token ${githubToken}`
             }
         });
+
         if (response.ok) {
             const data = await response.json();
-            return data.sha; // Retorna o SHA do arquivo
+            const content = atob(data.content);
+            const items = JSON.parse(content);
+            items.forEach(item => addMobiliario(item));
         } else {
-            console.error('Erro ao buscar o SHA do arquivo:', response.statusText);
-            return null;
+            console.error('Erro ao carregar os dados do GitHub:', response.statusText);
         }
     }
 
     async function saveToGithub() {
-        const sha = await getFileSha();
         const items = [];
         const rows = mobiliarioTable.getElementsByTagName('tr');
         for (let row of rows) {
@@ -317,6 +280,7 @@
             items.push(item);
         }
 
+        const sha = await getFileSha(); // Obtendo o SHA do arquivo
         const body = JSON.stringify({ message: 'Atualizando o inventário', content: btoa(JSON.stringify(items)), sha });
 
         const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${fileName}`, {
@@ -335,10 +299,37 @@
         }
     }
 
+    async function getFileSha() {
+        const response = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${fileName}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `token ${githubToken}`
+            }
+        });
+        if (response.ok) {
+            const data = await response.json();
+            return data.sha; // Retorna o SHA do arquivo
+        } else {
+            console.error('Erro ao buscar o SHA do arquivo:', response.statusText);
+            return null;
+        }
+    }
+
+    function updateColorText() {
+        const colorInput = document.getElementById('corPicker');
+        document.getElementById('cor').value = colorInput.value;
+    }
+
+    function updateColorPicker() {
+        const colorInput = document.getElementById('cor');
+        document.getElementById('corPicker').value = colorInput.value;
+    }
+
 </script>
 
 </body>
 </html>
+
 
 
 
