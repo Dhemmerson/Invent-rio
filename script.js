@@ -189,19 +189,23 @@ document.getElementById('exportButton').addEventListener('click', exportToPDF);
 async function exportToPDF() {
     const { jsPDF } = window.jspdf; // Carrega a biblioteca jsPDF
     const doc = new jsPDF();
-    const mobiliarioTable = document.getElementById('mobiliarioTable').getElementsByTagName('tbody')[0];
-    
+
     // Cabeçalho do PDF
+    doc.setFontSize(18);
     doc.text("Inventário de Mobiliário", 14, 10);
+    doc.setFontSize(12);
 
     // Adiciona cabeçalhos da tabela
     const headers = ['Etiqueta', 'Mobiliário', 'Local', 'Cor', 'Imagem', 'Observações', 'Data de Inclusão'];
     const colWidths = [30, 40, 30, 20, 40, 40, 30]; // Largura das colunas
+    const startY = 20; // Posição inicial Y
 
     // Desenha cabeçalhos
     headers.forEach((header, index) => {
-        doc.text(header, 14 + (index * 30), 20); // Ajuste a posição conforme necessário
+        doc.text(header, 14 + (index * 30), startY);
     });
+
+    let currentY = startY + 10; // Posição Y atual para os dados da tabela
 
     // Adiciona os dados da tabela
     for (let i = 0; i < mobiliarioTable.rows.length; i++) {
@@ -211,7 +215,7 @@ async function exportToPDF() {
         if (row.style.display !== 'none') {
             for (let j = 0; j < row.cells.length; j++) {
                 const cellValue = row.cells[j].innerText;
-                doc.text(cellValue, 14 + (j * 30), 30 + (i * 10)); // Ajuste a posição conforme necessário
+                doc.text(cellValue, 14 + (j * 30), currentY); // Ajuste a posição conforme necessário
 
                 // Adiciona a imagem, se existir
                 const imgElement = row.cells[4].getElementsByTagName('img')[0];
@@ -220,15 +224,20 @@ async function exportToPDF() {
                     const imgResponse = await fetch(imgSrc);
                     const imgBlob = await imgResponse.blob();
                     const imgDataUrl = URL.createObjectURL(imgBlob);
-                    
-                    doc.addImage(imgDataUrl, 'JPEG', 14 + (3 * 30), 30 + (i * 10) - 10, 20, 20); // Ajuste as coordenadas e o tamanho da imagem
+
+                    // Adiciona a imagem no PDF
+                    const imgWidth = 20; // Largura da imagem
+                    const imgHeight = 20; // Altura da imagem
+                    doc.addImage(imgDataUrl, 'JPEG', 14 + (3 * 30), currentY - 10, imgWidth, imgHeight); // Ajuste as coordenadas e o tamanho da imagem
                 }
             }
+            currentY += 10; // Move para a próxima linha
         }
     }
 
     // Salva o PDF
     doc.save('mobiliario.pdf');
 }
+
 
 
