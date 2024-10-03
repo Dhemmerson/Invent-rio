@@ -111,19 +111,105 @@
         <tbody>
         </tbody>
     </table>
-   <head>
-    <meta charset="UTF-8">
-    <title>Inventário de Mobiliário</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <link rel="stylesheet" href="estilos.css">
-</head>
-<button id="exportButton">Baixar em PDF</button>
+    <button id="exportButton">Baixar em PDF</button>
 
 </div>
 
-<script src="script.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+    const { jsPDF } = window.jspdf;
+
+    document.getElementById('inventarioForm').addEventListener('submit', function (event) {
+        event.preventDefault();
+        addMobiliario();
+    });
+
+    function addMobiliario() {
+        const numeroEtiqueta = document.getElementById('numeroEtiqueta').value;
+        const mobiliario = document.getElementById('mobiliario').value;
+        const local = document.getElementById('local').value;
+        const cor = document.getElementById('cor').value;
+        const imagem = document.getElementById('imagem').files[0];
+        const observacoes = document.getElementById('observacoes').value;
+
+        const tableBody = document.getElementById('mobiliarioTable').querySelector('tbody');
+        const newRow = tableBody.insertRow();
+
+        newRow.innerHTML = `
+            <td>${numeroEtiqueta}</td>
+            <td>${mobiliario}</td>
+            <td>${local}</td>
+            <td style="background-color: ${cor}">${cor}</td>
+            <td>${imagem ? imagem.name : ''}</td>
+            <td>${observacoes}</td>
+            <td>${new Date().toLocaleDateString()}</td>
+            <td><button onclick="deleteRow(this)">Excluir</button></td>
+        `;
+
+        // Limpar os campos do formulário
+        document.getElementById('inventarioForm').reset();
+    }
+
+    function deleteRow(button) {
+        const row = button.parentNode.parentNode;
+        row.parentNode.removeChild(row);
+    }
+
+    document.getElementById('exportButton').addEventListener('click', function () {
+        const doc = new jsPDF();
+
+        const table = document.getElementById('mobiliarioTable');
+        const rows = table.rows;
+        let pdfContent = [];
+
+        for (let i = 0; i < rows.length; i++) {
+            const rowData = [];
+            for (let j = 0; j < rows[i].cells.length; j++) {
+                rowData.push(rows[i].cells[j].innerText);
+            }
+            pdfContent.push(rowData);
+        }
+
+        doc.text("Inventário de Mobiliário", 10, 10);
+        doc.autoTable({ head: [pdfContent[0]], body: pdfContent.slice(1) });
+        doc.save('inventario.pdf');
+    });
+
+    function searchMobiliario() {
+        const input = document.getElementById('search').value.toLowerCase();
+        const table = document.getElementById('mobiliarioTable');
+        const rows = table.getElementsByTagName('tr');
+
+        for (let i = 1; i < rows.length; i++) {
+            const cells = rows[i].getElementsByTagName('td');
+            let found = false;
+
+            for (let j = 0; j < cells.length; j++) {
+                if (cells[j].innerText.toLowerCase().includes(input)) {
+                    found = true;
+                    break;
+                }
+            }
+
+            rows[i].style.display = found ? '' : 'none';
+        }
+    }
+
+    function updateColorText() {
+        const colorInput = document.getElementById('corPicker');
+        const colorText = document.getElementById('cor');
+        colorText.value = colorInput.value;
+    }
+
+    function updateColorPicker() {
+        const colorText = document.getElementById('cor');
+        const colorInput = document.getElementById('corPicker');
+        colorInput.value = colorText.value;
+    }
+</script>
 </body>
 </html>
+
 
 
 
