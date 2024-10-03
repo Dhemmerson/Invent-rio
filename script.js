@@ -1,4 +1,4 @@
-const githubToken = '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'; // Substitua pelo seu token de acesso pessoal
+const githubToken = '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'; // Substitua pelo seu token de acesso pessoal
 const repoOwner = 'Dhemmerson'; // Seu nome de usuário no GitHub
 const repoName = 'Invent-rio'; // Nome do seu repositório
 const fileName = 'mobiliario.json'; // Nome do arquivo JSON
