@@ -1,194 +1,48 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Controle de Inventário</title>
-    <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            background: url('sua-imagem-de-fundo.jpg') no-repeat center center fixed;
-            background-size: cover;
-            color: #333;
-            margin: 0;
-            padding: 20px;
-        }
-        h1, h2 {
-            text-align: center;
-            color: #4a4a4a;
-            margin-bottom: 20px;
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: rgba(255, 255, 255, 0.8);
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        input[type="text"], input[type="color"], select {
-            width: calc(100% - 20px);
-            padding: 10px;
-            margin: 5px 0;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        button {
-            background-color: #5c67f2;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            padding: 10px 15px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        button:hover {
-            background-color: #4a54d1;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventário</title>
+  <link rel="stylesheet" href="estilos.css">
 </head>
 <body>
+  <h1>Inclusão de Itens de Inventário</h1>
+  
+  <form id="inventario-form">
+    <label for="etiqueta">Número da Etiqueta:</label>
+    <input type="text" id="etiqueta" required>
 
-<div class="container">
-    <h1>Controle de Inventário</h1>
+    <label for="item">Item:</label>
+    <input type="text" id="item" required>
 
-    <h2>Inclusão de Mobiliário</h2>
-    <form id="inventarioForm">
-        <input type="text" id="numeroEtiqueta" placeholder="Número da Etiqueta" required>
-        <input type="text" id="mobiliario" placeholder="Mobiliário" required>
-        <select id="local" required>
-            <option value="">Selecione o Local</option>
-            <option value="Recepção">Recepção</option>
-            <option value="Sala Comercial">Sala Comercial</option>
-            <option value="Sala Financeiro">Sala Financeiro</option>
-            <option value="Sala SAC/Administrativo">Sala SAC/Administrativo</option>
-            <option value="Sala CEO">Sala CEO</option>
-            <option value="Sala de Descanso">Sala de Descanso</option>
-            <option value="Copa">Copa</option>
-        </select>
-        <label for="cor">Selecione a Cor:</label>
-        <input type="color" id="cor" required>
-        <input type="text" id="observacoes" placeholder="Observações">
-        <button type="submit">Adicionar Mobiliário</button>
-    </form>
+    <label for="cor">Cor:</label>
+    <input type="text" id="cor">
 
-    <h2>Listagem de Mobiliário</h2>
-    <input type="text" id="search" placeholder="🔍 Buscar pelo Local" onkeyup="searchMobiliario()">
-    <table id="mobiliarioTable">
-        <thead>
-            <tr>
-                <th>Número da Etiqueta</th>
-                <th>Mobiliário</th>
-                <th>Local</th>
-                <th>Cor</th>
-                <th>Observações</th>
-                <th>Data</th>
-                <th>Ações</th>
-            </tr>
-        </thead>
-        <tbody>
-        </tbody>
-    </table>
-    <button id="exportButton">Baixar em PDF</button>
+    <label for="imagem">Imagem:</label>
+    <input type="file" id="imagem">
 
-</div>
+    <label for="observacao">Observação:</label>
+    <textarea id="observacao"></textarea>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.11/jspdf.plugin.autotable.min.js"></script>
-<script>
-    const { jsPDF } = window.jspdf;
+    <label for="local">Local:</label>
+    <select id="local">
+      <option value="sala sac/adm">Sala SAC/ADM</option>
+      <option value="sala comercial">Sala Comercial</option>
+      <option value="sala financeiro">Sala Financeiro</option>
+      <option value="sala ceo">Sala CEO</option>
+      <option value="sala de descanso">Sala de Descanso</option>
+      <option value="copa">Copa</option>
+    </select>
 
-    document.getElementById('inventarioForm').addEventListener('submit', function (event) {
-        event.preventDefault();
-        addMobiliario();
-    });
+    <button type="submit">Enviar</button>
+  </form>
 
-    function addMobiliario() {
-        const numeroEtiqueta = document.getElementById('numeroEtiqueta').value;
-        const mobiliario = document.getElementById('mobiliario').value;
-        const local = document.getElementById('local').value;
-        const cor = document.getElementById('cor').value;
-        const observacoes = document.getElementById('observacoes').value;
+  <h2>Buscar Itens</h2>
+  <input type="text" id="buscar" placeholder="Buscar por etiqueta, item ou local">
+  <div id="resultados-busca"></div>
 
-        const tableBody = document.getElementById('mobiliarioTable').querySelector('tbody');
-        const newRow = tableBody.insertRow();
-
-        newRow.innerHTML = `
-            <td>${numeroEtiqueta}</td>
-            <td>${mobiliario}</td>
-            <td>${local}</td>
-            <td style="background-color: ${cor}">${cor}</td>
-            <td>${observacoes}</td>
-            <td>${new Date().toLocaleDateString()}</td>
-            <td><button onclick="deleteRow(this)">Excluir</button></td>
-        `;
-
-        // Limpar os campos do formulário
-        document.getElementById('inventarioForm').reset();
-    }
-
-    function deleteRow(button) {
-        const row = button.parentNode.parentNode;
-        row.parentNode.removeChild(row);
-    }
-
-    document.getElementById('exportButton').addEventListener('click', function () {
-        const doc = new jsPDF();
-        const table = document.getElementById('mobiliarioTable');
-        const rows = table.rows;
-        const pdfContent = [];
-
-        for (let i = 1; i < rows.length; i++) {
-            const rowData = [];
-            for (let j = 0; j < rows[i].cells.length; j++) {
-                rowData.push(rows[i].cells[j].innerText);
-            }
-            pdfContent.push(rowData);
-        }
-
-        // Gera o PDF
-        doc.text("Inventário de Mobiliário", 10, 10);
-        doc.autoTable({
-            head: [['Número da Etiqueta', 'Mobiliário', 'Local', 'Cor', 'Observações', 'Data']],
-            body: pdfContent,
-            startY: 20,
-        });
-        doc.save('inventario.pdf');
-    });
-
-    function searchMobiliario() {
-        const input = document.getElementById('search').value.toLowerCase();
-        const table = document.getElementById('mobiliarioTable');
-        const rows = table.getElementsByTagName('tr');
-
-        for (let i = 1; i < rows.length; i++) {
-            const cells = rows[i].getElementsByTagName('td');
-            let found = false;
-
-            for (let j = 0; j < cells.length; j++) {
-                if (cells[j].innerText.toLowerCase().includes(input)) {
-                    found = true;
-                    break;
-                }
-            }
-
-            rows[i].style.display = found ? '' : 'none';
-        }
-    }
-</script>
+  <script src="script.js"></script>
 </body>
 </html>
 
