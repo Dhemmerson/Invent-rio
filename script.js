@@ -197,14 +197,14 @@ async function exportToPDF() {
     doc.setTextColor(40); // Define a cor do texto
 
     // Adiciona cabeçalhos da tabela
-    const headers = ['Etiqueta', 'Mobiliário', 'Local', 'Cor', 'Imagem', 'Observações', 'Data de Inclusão'];
+    const headers = ['Etiqueta', 'Mobiliário', 'Local', 'Cor', 'Imagem', 'Observações', 'Data'];
     const colWidths = [30, 40, 30, 20, 40, 40, 30]; // Largura das colunas
     const startY = 30; // Posição inicial Y
 
     // Desenha cabeçalhos
     headers.forEach((header, index) => {
         doc.setFont("helvetica", "bold");
-        doc.text(header, 14 + (index * 30), startY);
+        doc.text(header, 14 + (index * 30), startY); // Ajuste a posição conforme necessário
     });
 
     let currentY = startY + 10; // Posição Y atual para os dados da tabela
@@ -246,6 +246,7 @@ async function exportToPDF() {
     // Salva o PDF
     doc.save('mobiliario.pdf');
 }
+
 
 
 
