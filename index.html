@@ -26,7 +26,7 @@
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        input[type="text"], input[type="file"], input[type="color"], select {
+        input[type="text"], input[type="color"], select {
             width: calc(100% - 20px);
             padding: 10px;
             margin: 5px 0;
@@ -107,6 +107,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.11/jspdf.plugin.autotable.min.js"></script>
 <script>
     const { jsPDF } = window.jspdf;
 
@@ -148,7 +149,7 @@
         const doc = new jsPDF();
         const table = document.getElementById('mobiliarioTable');
         const rows = table.rows;
-        let pdfContent = [];
+        const pdfContent = [];
 
         for (let i = 0; i < rows.length; i++) {
             const rowData = [];
@@ -158,8 +159,16 @@
             pdfContent.push(rowData);
         }
 
+        // Define os cabeçalhos da tabela
+        const headers = pdfContent[0];
+
+        // Gera o PDF
         doc.text("Inventário de Mobiliário", 10, 10);
-        doc.autoTable({ head: [pdfContent[0]], body: pdfContent.slice(1) });
+        doc.autoTable({
+            head: [headers],
+            body: pdfContent.slice(1),
+            startY: 20,
+        });
         doc.save('inventario.pdf');
     });
 
@@ -185,6 +194,7 @@
 </script>
 </body>
 </html>
+
 
 
 
