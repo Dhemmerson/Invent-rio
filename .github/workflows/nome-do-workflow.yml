@@ -1,1 +1,30 @@
+name: Atualizar mobiliario.json
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  update_file:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      
+      - name: Atualizar arquivo mobiliario.json
+        run: |
+          echo "Atualizando mobiliario.json"
+          # Coloque aqui os comandos para editar o arquivo mobiliario.json
+
+      - name: Commit e push
+        run: |
+          git config --global user.name "Seu Nome"
+          git config --global user.email "seuemail@exemplo.com"
+          git add mobiliario.json
+          git commit -m "Atualização do arquivo mobiliario.json"
+          git push
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
