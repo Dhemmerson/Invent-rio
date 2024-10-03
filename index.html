@@ -58,12 +58,6 @@
         th {
             background-color: #f2f2f2;
         }
-        img {
-            max-width: 100px;
-        }
-        .editing {
-            background-color: #e0f7fa; /* Cor de fundo para indicar edição */
-        }
     </style>
 </head>
 <body>
@@ -86,9 +80,7 @@
             <option value="Copa">Copa</option>
         </select>
         <label for="cor">Selecione a Cor:</label>
-        <input type="color" id="corPicker" onchange="updateColorText()" style="display: inline-block; width: auto;">
-        <input type="text" id="cor" placeholder="Nome da Cor" oninput="updateColorPicker()" required>
-        <input type="file" id="imagem" accept="image/*" required>
+        <input type="color" id="cor" required>
         <input type="text" id="observacoes" placeholder="Observações">
         <button type="submit">Adicionar Mobiliário</button>
     </form>
@@ -102,7 +94,6 @@
                 <th>Mobiliário</th>
                 <th>Local</th>
                 <th>Cor</th>
-                <th>Imagem</th>
                 <th>Observações</th>
                 <th>Data</th>
                 <th>Ações</th>
@@ -129,7 +120,6 @@
         const mobiliario = document.getElementById('mobiliario').value;
         const local = document.getElementById('local').value;
         const cor = document.getElementById('cor').value;
-        const imagem = document.getElementById('imagem').files[0];
         const observacoes = document.getElementById('observacoes').value;
 
         const tableBody = document.getElementById('mobiliarioTable').querySelector('tbody');
@@ -140,7 +130,6 @@
             <td>${mobiliario}</td>
             <td>${local}</td>
             <td style="background-color: ${cor}">${cor}</td>
-            <td>${imagem ? imagem.name : ''}</td>
             <td>${observacoes}</td>
             <td>${new Date().toLocaleDateString()}</td>
             <td><button onclick="deleteRow(this)">Excluir</button></td>
@@ -157,7 +146,6 @@
 
     document.getElementById('exportButton').addEventListener('click', function () {
         const doc = new jsPDF();
-
         const table = document.getElementById('mobiliarioTable');
         const rows = table.rows;
         let pdfContent = [];
@@ -193,18 +181,6 @@
 
             rows[i].style.display = found ? '' : 'none';
         }
-    }
-
-    function updateColorText() {
-        const colorInput = document.getElementById('corPicker');
-        const colorText = document.getElementById('cor');
-        colorText.value = colorInput.value;
-    }
-
-    function updateColorPicker() {
-        const colorText = document.getElementById('cor');
-        const colorInput = document.getElementById('corPicker');
-        colorInput.value = colorText.value;
     }
 </script>
 </body>
