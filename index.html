@@ -151,7 +151,7 @@
         const rows = table.rows;
         const pdfContent = [];
 
-        for (let i = 0; i < rows.length; i++) {
+        for (let i = 1; i < rows.length; i++) {
             const rowData = [];
             for (let j = 0; j < rows[i].cells.length; j++) {
                 rowData.push(rows[i].cells[j].innerText);
@@ -159,14 +159,11 @@
             pdfContent.push(rowData);
         }
 
-        // Define os cabeçalhos da tabela
-        const headers = pdfContent[0];
-
         // Gera o PDF
         doc.text("Inventário de Mobiliário", 10, 10);
         doc.autoTable({
-            head: [headers],
-            body: pdfContent.slice(1),
+            head: [['Número da Etiqueta', 'Mobiliário', 'Local', 'Cor', 'Observações', 'Data']],
+            body: pdfContent,
             startY: 20,
         });
         doc.save('inventario.pdf');
