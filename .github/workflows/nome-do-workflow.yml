@@ -1,30 +1,29 @@
-name: Atualizar mobiliario.json
-
-on:
-  push:
-    branches:
-      - main
-
 jobs:
-  update_file:
+  update-mobiliario:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
+      - name: Checkout do repositório
         uses: actions/checkout@v2
-      
-      - name: Atualizar arquivo mobiliario.json
-        run: |
-          echo "Atualizando mobiliario.json"
-          # Coloque aqui os comandos para editar o arquivo mobiliario.json
 
-      - name: Commit e push
+      - name: Atualize o mobiliario.json
+        run: |
+          # Aqui você insere o código para modificar o arquivo mobiliario.json
+          # Por exemplo, você pode usar um comando echo para modificar o arquivo
+          echo 'Adicionando dados ao mobiliario.json' >> mobiliario.json
+
+      - name: Configurar Git
         run: |
           git config --global user.name "Seu Nome"
           git config --global user.email "seuemail@exemplo.com"
+
+      - name: Verificar se o arquivo foi modificado
+        run: |
+          git diff --exit-code mobiliario.json || echo "O arquivo mobiliario.json foi alterado."
+
+      - name: Commit e Push (se houver mudanças)
+        run: |
           git add mobiliario.json
-          git commit -m "Atualização do arquivo mobiliario.json"
+          git diff --quiet || git commit -m "Atualização do mobiliario.json"
           git push
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-
