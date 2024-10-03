@@ -188,20 +188,22 @@ document.getElementById('exportButton').addEventListener('click', exportToPDF);
 
 async function exportToPDF() {
     const { jsPDF } = window.jspdf; // Carrega a biblioteca jsPDF
-    const doc = new jsPDF();
+    const doc = new jsPDF({ orientation: 'landscape' }); // Define a orientação como paisagem
 
     // Cabeçalho do PDF
     doc.setFontSize(18);
     doc.text("Inventário de Mobiliário", 14, 10);
     doc.setFontSize(12);
+    doc.setTextColor(40); // Define a cor do texto
 
     // Adiciona cabeçalhos da tabela
     const headers = ['Etiqueta', 'Mobiliário', 'Local', 'Cor', 'Imagem', 'Observações', 'Data de Inclusão'];
     const colWidths = [30, 40, 30, 20, 40, 40, 30]; // Largura das colunas
-    const startY = 20; // Posição inicial Y
+    const startY = 30; // Posição inicial Y
 
     // Desenha cabeçalhos
     headers.forEach((header, index) => {
+        doc.setFont("helvetica", "bold");
         doc.text(header, 14 + (index * 30), startY);
     });
 
@@ -213,6 +215,7 @@ async function exportToPDF() {
 
         // Verifica se a linha não está oculta
         if (row.style.display !== 'none') {
+            doc.setFont("helvetica", "normal"); // Fonte normal para dados
             for (let j = 0; j < row.cells.length; j++) {
                 const cellValue = row.cells[j].innerText;
                 doc.text(cellValue, 14 + (j * 30), currentY); // Ajuste a posição conforme necessário
@@ -228,12 +231,17 @@ async function exportToPDF() {
                     // Adiciona a imagem no PDF
                     const imgWidth = 20; // Largura da imagem
                     const imgHeight = 20; // Altura da imagem
-                    doc.addImage(imgDataUrl, 'JPEG', 14 + (3 * 30), currentY - 10, imgWidth, imgHeight); // Ajuste as coordenadas e o tamanho da imagem
+                    doc.addImage(imgDataUrl, 'JPEG', 14 + (4 * 30), currentY - 10, imgWidth, imgHeight); // Ajuste as coordenadas e o tamanho da imagem
                 }
             }
             currentY += 10; // Move para a próxima linha
         }
     }
+
+    // Adiciona uma linha horizontal após a tabela
+    doc.setLineWidth(0.5);
+    doc.line(14, currentY, doc.internal.pageSize.width - 14, currentY); // Linha horizontal
+    currentY += 5; // Espaço após a linha
 
     // Salva o PDF
     doc.save('mobiliario.pdf');
