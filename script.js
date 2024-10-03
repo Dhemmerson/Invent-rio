@@ -183,4 +183,32 @@ async function getFileSha() {
     const data = await response.json();
     return data.sha;
 }
+// Adiciona um listener para o botão de exportação
+document.getElementById('exportButton').addEventListener('click', exportToPDF);
+
+async function exportToPDF() {
+    const { jsPDF } = window.jspdf; // Carrega a biblioteca jsPDF
+    const doc = new jsPDF();
+    const mobiliarioTable = document.getElementById('mobiliarioTable').getElementsByTagName('tbody')[0];
+
+    // Cabeçalho do PDF
+    doc.text("Inventário de Mobiliário", 14, 10);
+    
+    // Adiciona cabeçalhos da tabela
+    const headers = ['Etiqueta', 'Mobiliário', 'Local', 'Cor', 'Imagem', 'Observações', 'Data de Inclusão'];
+    headers.forEach((header, index) => {
+        doc.text(header, 14 + (index * 30), 20); // Ajuste a posição conforme necessário
+    });
+
+    // Adiciona os dados da tabela
+    for (let i = 0; i < mobiliarioTable.rows.length; i++) {
+        const row = mobiliarioTable.rows[i];
+        for (let j = 0; j < row.cells.length; j++) {
+            doc.text(row.cells[j].innerText, 14 + (j * 30), 30 + (i * 10)); // Ajuste a posição conforme necessário
+        }
+    }
+
+    // Salva o PDF
+    doc.save('mobiliario.pdf');
+}
 
